@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+export DEBIAN_FRONTEND=noninteractive
+
+installpkg(){
+    dpkg-query --status $1 >/dev/null || apt-get install -y $1
+}
+
+apt-get update
+installpkg freeradius
+installpkg freeradius-mysql
+installpkg mysql-server
+installpkg mysql-client
+installpkg libmysqlclient-dev
+#enable sql in freeradius
+sed -E  "s/#(\s*)\\\$INCLUDE sql\.conf/\$INCLUDE sql.conf/" /etc/freeradius/radiusd.conf  > /etc/freeradius/radiusd.conf.tmp && mv /etc/freeradius/radiusd.conf.tmp /etc/freeradius/radiusd.conf
+#enable sql in default site's authorization
+sed -E  "0,/#(\s*)sql$/{s/#(\s*)sql$/		sql/}" /etc/freeradius/sites-enabled/default  > /etc/freeradius/sites-enabled/default.tmp && mv /etc/freeradius/sites-enabled/default.tmp /etc/freeradius/sites-enabled/default
+service freeradius restart
+bootstrapdb(){
+    cat <<EOF | mysql -uroot
+    DROP DATABASE IF EXISTS radius;
+    CREATE DATABASE radius;
+    use radius;
+    source /etc/freeradius/sql/mysql/admin.sql;
+    source /etc/freeradius/sql/mysql/schema.sql;
+    source /etc/freeradius/sql/mysql/nas.sql;
+    INSERT INTO radcheck (username, attribute, op, value) VALUES ('bob', 'Cleartext-Password', ':=', 'passbob');
+	INSERT INTO radreply (username, attribute, op, value) VALUES ('bob', 'Reply-Message', '=', 'Hello Bob!');
+EOF
+}
+bootstrapdb
+#test authorization
+radtest bob passbob 127.0.0.1 100 testing123
