@@ -31,3 +31,9 @@ Sending Access-Request of id 242 to 127.0.0.1 port 1812
 rad_recv: Access-Accept packet from host 127.0.0.1 port 1812, id=242, length=32
 	Reply-Message = "Hello Bob!"
 ```
+
+Router EAP-TLS authentication mode
+====================================
+[From https://wiki.freeradius.org/guide/SQL-HOWTO#populating-sql](https://wiki.freeradius.org/guide/SQL-HOWTO#populating-sql)
+
+EAP utilizes an inner-tunnel authentication mechanism. Radtest will always succeed but you won't get any response from the freeradius server if you have set up radius server on your router. To make it work, uncomment the "sql" in sites-enabled/inner-tunnel then restart the freeradius server. That's all needed to pass authentication.
